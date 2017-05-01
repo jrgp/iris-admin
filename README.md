@@ -10,6 +10,8 @@ User bootstrap/editor script for iris.
 
 ### Usage
 
+First edit your mysql settings in `configs/config.dev.yaml`.
+
 
     . env/bin/activate
     make
