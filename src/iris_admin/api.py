@@ -62,6 +62,22 @@ class UsersList:
         cursor.close()
         connection.close()
 
+    def on_post(self, req, resp):
+        username = ujson.loads(req.stream.read())['username']
+
+        connection = db.engine.raw_connection()
+        cursor = connection.cursor(db.dict_cursor)
+        cursor.execute('''INSERT INTO `target` (`name`, `type_id`, `active`)
+                          VALUES (%s, (SELECT `id` FROM `target_type` WHERE `name` = 'user'), TRUE)''', username)
+        user_id = cursor.lastrowid
+        connection.commit()
+
+        cursor.execute('''INSERT INTO `user` (`target_id`, `admin`) VALUES (%s, FALSE) ''', user_id)
+        cursor.close()
+        connection.commit()
+        connection.close()
+        resp.body = '{}'
+
 
 class User():
     def on_get(self, req, resp, username):
@@ -115,6 +131,18 @@ class User():
                                       %(destination)s)
                               ON DUPLICATE KEY UPDATE `destination` = %(destination)s''',
                            {'username': username, 'mode': mode, 'destination': destination})
+        cursor.close()
+        connection.commit()
+        connection.close()
+        resp.body = '{}'
+
+    def on_delete(self, req, resp, username):
+        connection = db.engine.raw_connection()
+        cursor = connection.cursor(db.dict_cursor)
+        cursor.execute('''DELETE FROM `target`
+                          WHERE `name` = %s
+                          AND `type_id` = (SELECT `id` FROM `target_type` WHERE `name` = 'user')
+                          LIMIT 1''', username)
         cursor.close()
         connection.commit()
         connection.close()
