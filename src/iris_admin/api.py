@@ -82,6 +82,11 @@ class User():
         WHERE `target`.`name` = %s
         AND `target`.`type_id` = (SELECT `id` FROM `target_type` WHERE `name` = 'user')''', username)
         info['contacts'] = dict(cursor)
+
+        cursor.execute('''SELECT `name` FROM `mode` WHERE `name` != 'drop' ''')
+        for (mode,) in cursor:
+            info['contacts'].setdefault(mode, '')
+
         cursor.close()
         connection.close()
         resp.body = ujson.dumps(info)
@@ -102,6 +107,7 @@ class User():
             limit 1
         ''', [info['admin'], username])
         for mode, destination in contacts.iteritems():
+            destination = destination.strip()
             cursor.execute('''INSERT INTO `target_contact` (`target_id`, `mode_id`, `destination`)
                               VALUES (
                                       (SELECT `id` FROM `target` WHERE `name` = %(username)s AND `type_id` = (SELECT `id` FROM `target_type` WHERE `name` = 'user')),
