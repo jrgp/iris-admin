@@ -1,0 +1,176 @@
+<html>
+<head>
+<title>Iris User Editor</title>
+<script src="/static/jquery.min.js" type="text/javascript"></script>
+<script src="/static/handlebars.min.js" type="text/javascript"></script>
+<script src="/static/navigo.min.js" type="text/javascript"></script>
+<script>
+  function get_users(startat, callback) {
+    $.get('/api/users?startat=' + (startat ? startat : 0), callback);
+  }
+  function get_user(username, callback) {
+    $.get('/api/users/' + username, callback);
+  }
+  function edit_user(username, info, callback) {
+    console.log('saving')
+    $.ajax({
+          url: '/api/users/' + username,
+          data: JSON.stringify(info),
+          method: 'PUT',
+          contentType: 'application/json'
+    }).done(callback);
+  }
+  $(function() {
+    Handlebars.registerHelper('booltostr', function(str) {
+      return str ? 'Yes' : 'no';
+    });
+    var user_lister = Handlebars.compile($('#user-lister-template').html());
+    var user_viewer = Handlebars.compile($('#user-viewer-template').html());
+    var user_editor = Handlebars.compile($('#user-editor-template').html());
+    var $content = $('#content');
+
+    var root = null;
+    var useHash = false;
+    var hash = '#!';
+    var router = new Navigo(root, useHash, hash);
+
+    $content.on('submit', '#user-edit', function(e){
+      e.preventDefault();
+      var $save_user_button = $('#save-user');
+      $save_user_button.prop('disabled', 'true');
+      var username = $save_user_button.data('user');
+      var contacts = {};
+      $('#user-edit').find('input').each(function() {
+        var $this = $(this), mode = $this.data('mode'), val = $(this).val();
+        contacts[mode] = val;
+      });
+      var info = {
+        contacts: contacts,
+        admin: $('#admin').prop('checked'),
+        active: $('#active').prop('checked')
+      };
+      edit_user(username, info, function(){
+        console.log('saved')
+        router.navigate('/user/' + username);
+      });
+    });
+
+    router.on({
+      '/user/:username': function (params) {
+        get_user(params.username, function(data) {
+          $content.html(user_viewer({user: params.username, info: data}));
+          router.updatePageLinks();
+        });
+      },
+      '/user/:username/edit': function (params) {
+        get_user(params.username, function(data) {
+          $content.html(user_editor({user: params.username, info: data}));
+          router.updatePageLinks();
+        });
+      },
+      '/': function () {
+        get_users(0, function(data) {
+          var next = '/users/startat/' + (200);
+          $content.html(user_lister({users: data, next: next}));
+          router.updatePageLinks();
+        });
+      },
+      '/users/startat/:startat': function (params) {
+        get_users(params.startat, function(data) {
+          var next = '/users/startat/' + (parseInt(params.startat) + 200);
+          var prev = '/users/startat/' + (parseInt(params.startat) - 200);
+          if (params.startat == 200) {
+              var prev = '/';
+          }
+          $content.html(user_lister({users: data, next: next, prev: prev}));
+          router.updatePageLinks();
+        });
+      },
+    }).resolve();
+  });
+</script>
+</head>
+<body>
+
+<div id="content"></div>
+
+<script id="user-lister-template" type="text/x-handlebars-template">
+{{#if prev }}
+<a href="{{prev}}" data-navigo>Prev</a>
+{{/if}}
+{{#if next }}
+<a href="{{next}}" data-navigo>Next</a>
+{{/if}}
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Active</th>
+      <th>Admin</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each users}}
+    <tr>
+      <td><a data-navigo href="user/{{name}}">{{name}}</a></td>
+      <td>{{booltostr active}}</td>
+      <td>{{booltostr admin}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+</script>
+
+<script id="user-viewer-template" type="text/x-handlebars-template">
+{{ user }}
+<table>
+  <thead>
+    <tr>
+      <th>Contact</th>
+      <th>Destination</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each info.contacts}}
+    <tr>
+      <td>{{@key}}</td>
+      <td>{{this}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+Admin: <input disabled type="checkbox" id="admin"{{#if info.admin}}checked{{/if}}><br>
+Active: <input disabled type="checkbox" id="active"{{#if info.active}}checked{{/if}}><br>
+<a href="/" data-navigo>Back</a>
+<a href="/user/{{user}}/edit" data-navigo>Edit</a>
+</script>
+
+<script id="user-editor-template" type="text/x-handlebars-template">
+{{ user }}
+<form id="user-edit">
+<table>
+  <thead>
+    <tr>
+      <th>Contact</th>
+      <th>Destination</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each info.contacts}}
+    <tr>
+      <td>{{@key}}</td>
+      <td><input data-mode="{{@key}}" value="{{this}}"></td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+
+Admin: <input type="checkbox" id="admin"{{#if info.admin}}checked{{/if}}><br>
+Active: <input type="checkbox" id="active"{{#if info.active}}checked{{/if}}><br>
+
+<a href="/user/{{user}}">Back</a><button data-user="{{user}}" id="save-user">Save</button>
+</form>
+</script>
+
+</body>
+</html>
