@@ -12,7 +12,6 @@
     $.get('/api/users/' + username, callback);
   }
   function edit_user(username, info, callback) {
-    console.log('saving')
     $.ajax({
           url: '/api/users/' + username,
           data: JSON.stringify(info),
@@ -40,7 +39,7 @@
       $save_user_button.prop('disabled', 'true');
       var username = $save_user_button.data('user');
       var contacts = {};
-      $('#user-edit').find('input').each(function() {
+      $('#user-edit').find('input[type=text]').each(function() {
         var $this = $(this), mode = $this.data('mode'), val = $(this).val();
         contacts[mode] = val;
       });
@@ -50,7 +49,6 @@
         active: $('#active').prop('checked')
       };
       edit_user(username, info, function(){
-        console.log('saved')
         router.navigate('/user/' + username);
       });
     });
@@ -159,7 +157,7 @@ Active: <input disabled type="checkbox" id="active"{{#if info.active}}checked{{/
     {{#each info.contacts}}
     <tr>
       <td>{{@key}}</td>
-      <td><input data-mode="{{@key}}" value="{{this}}"></td>
+      <td><input type="text" data-mode="{{@key}}" value="{{this}}"></td>
     </tr>
     {{/each}}
   </tbody>

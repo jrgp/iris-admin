@@ -17,6 +17,8 @@ mimes = {'.css': 'text/css',
 
 
 _filename_ascii_strip_re = re.compile(r'[^A-Za-z0-9_.-]')
+
+
 def secure_filename(filename):
     for sep in os.path.sep, os.path.altsep:
         if sep:
@@ -86,6 +88,7 @@ class User():
 
     def on_put(self, req, resp, username):
         info = ujson.loads(req.stream.read())
+        contacts = info['contacts']
         connection = db.engine.raw_connection()
         cursor = connection.cursor(db.dict_cursor)
         cursor.execute('''
@@ -98,6 +101,14 @@ class User():
             where `target_id` = (select `id` from `target` where `name` = %s)
             limit 1
         ''', [info['admin'], username])
+        for mode, destination in contacts.iteritems():
+            cursor.execute('''INSERT INTO `target_contact` (`target_id`, `mode_id`, `destination`)
+                              VALUES (
+                                      (SELECT `id` FROM `target` WHERE `name` = %(username)s AND `type_id` = (SELECT `id` FROM `target_type` WHERE `name` = 'user')),
+                                      (SELECT `id` FROM `mode` WHERE `name` = %(mode)s),
+                                      %(destination)s)
+                              ON DUPLICATE KEY UPDATE `destination` = %(destination)s''',
+                           {'username': username, 'mode': mode, 'destination': destination})
         cursor.close()
         connection.commit()
         connection.close()
