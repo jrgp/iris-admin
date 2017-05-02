@@ -5,6 +5,11 @@ import ujson
 import os
 import re
 import yaml
+import phonenumbers
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 ui_root = os.path.abspath(os.path.dirname(__file__))
 mimes = {'.css': 'text/css',
@@ -17,6 +22,10 @@ mimes = {'.css': 'text/css',
 
 
 _filename_ascii_strip_re = re.compile(r'[^A-Za-z0-9_.-]')
+
+
+def normalize_phone_number(number):
+    return phonenumbers.format_number(phonenumbers.parse(number, 'US'), phonenumbers.PhoneNumberFormat.INTERNATIONAL)
 
 
 def secure_filename(filename):
@@ -135,7 +144,17 @@ class User():
             LIMIT 1
         ''', [info['admin'], username])
         for mode, destination in contacts.iteritems():
+
             destination = destination.strip()
+            if mode in ('call', 'sms'):
+                try:
+                    old_destination = destination
+                    destination = normalize_phone_number(destination)
+                    if old_destination != destination:
+                        logger.info('Normalized %s to %s', old_destination, destination)
+                except Exception:
+                    logger.exception('Failed normalizing phone number %s', destination)
+
             cursor.execute('''INSERT INTO `target_contact` (`target_id`, `mode_id`, `destination`)
                               VALUES (
                                       (SELECT `id` FROM `target` WHERE `name` = %(username)s AND `type_id` = (SELECT `id` FROM `target_type` WHERE `name` = 'user')),
@@ -167,6 +186,8 @@ def home_route(req, resp):
 
 
 def get_app():
+    logging.basicConfig(format='[%(asctime)s] [%(process)d] [%(levelname)s] %(name)s %(message)s',
+                        level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S %z')
     config_file = os.environ.get('CONFIG')
     with open(config_file) as h:
         config = yaml.load(h.read())
