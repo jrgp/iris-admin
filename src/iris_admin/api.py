@@ -52,12 +52,24 @@ class UsersList:
         start_at = req.get_param_as_int('startat', min=0)
         if not start_at:
             start_at = 0
+
+        startswith = req.get_param('startswith')
+
+        query = '''SELECT `target`.`name`, `user`.`admin`, `target`.`active`
+                   FROM `target`
+                   JOIN `user` on `user`.`target_id` = `target`.`id` '''
+        wheres = []
+
+        if startswith:
+            query += 'WHERE `target`.`name` LIKE %s'
+            wheres.append(startswith + '%')
+
+        query += 'LIMIT %s, 100'
+        wheres.append(start_at)
+
         connection = db.engine.raw_connection()
         cursor = connection.cursor(db.dict_cursor)
-        cursor.execute('''SELECT `target`.`name`, `user`.`admin`, `target`.`active`
-                          FROM `target`
-                          JOIN `user` on `user`.`target_id` = `target`.`id`
-                          limit %s, 100''', [start_at])
+        cursor.execute(query, wheres)
         resp.body = ujson.dumps(cursor)
         cursor.close()
         connection.close()
@@ -92,11 +104,11 @@ class User():
 
         cursor = connection.cursor()
         cursor.execute('''SELECT `mode`.`name`, `target_contact`.`destination`
-        FROM `target_contact`
-        JOIN `mode` on `mode`.`id` = `target_contact`.`mode_id`
-        JOIN `target` on `target`.`id` = `target_contact`.`target_id`
-        WHERE `target`.`name` = %s
-        AND `target`.`type_id` = (SELECT `id` FROM `target_type` WHERE `name` = 'user')''', username)
+                          FROM `target_contact`
+                          JOIN `mode` on `mode`.`id` = `target_contact`.`mode_id`
+                          JOIN `target` on `target`.`id` = `target_contact`.`target_id`
+                          WHERE `target`.`name` = %s
+                          AND `target`.`type_id` = (SELECT `id` FROM `target_type` WHERE `name` = 'user')''', username)
         info['contacts'] = dict(cursor)
 
         cursor.execute('''SELECT `name` FROM `mode` WHERE `name` != 'drop' ''')
@@ -113,14 +125,14 @@ class User():
         connection = db.engine.raw_connection()
         cursor = connection.cursor(db.dict_cursor)
         cursor.execute('''
-            update `target` set `active` = %s
-            where `name` = %s
-            limit 1
+            UPDATE `target` SET `active` = %s
+            WHERE `name` = %s
+            LIMIT 1
         ''', [info['active'], username])
         cursor.execute('''
-            update `user` set `admin` = %s
-            where `target_id` = (select `id` from `target` where `name` = %s)
-            limit 1
+            UPDATE `user` SET `admin` = %s
+            WHERE `target_id` = (SELECT `id` FROM `target` WHERE `name` = %s)
+            LIMIT 1
         ''', [info['admin'], username])
         for mode, destination in contacts.iteritems():
             destination = destination.strip()
@@ -154,7 +166,7 @@ def home_route(req, resp):
     resp.body = open('page.html').read()
 
 
-def get_app(*args, **kwargs):
+def get_app():
     config_file = os.environ.get('CONFIG')
     with open(config_file) as h:
         config = yaml.load(h.read())
