@@ -6,7 +6,7 @@ import os
 import re
 import yaml
 
-ui_root = os.environ.get('STATIC_ROOT', os.path.abspath(os.path.dirname(__file__)))
+ui_root = os.path.abspath(os.path.dirname(__file__))
 mimes = {'.css': 'text/css',
          '.jpg': 'image/jpeg',
          '.js': 'text/javascript',
@@ -163,7 +163,7 @@ class User():
 
 def home_route(req, resp):
     resp.content_type = 'text/html'
-    resp.body = open('page.html').read()
+    resp.body = open(os.path.join(ui_root, 'static/spa.html')).read()
 
 
 def get_app():
