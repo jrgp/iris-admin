@@ -1,6 +1,19 @@
 User bootstrap/editor script for iris.
 --
 
+Listing users:
+
+![alt text](screenshots/user_list.png "List Users")
+
+Editing a user user:
+
+![alt text](screenshots/user_edit.png "Edit a user")
+
+Creating a user:
+
+![alt text](screenshots/user_create.png "Creating a user")
+
+
 ###  Setup
 
     virtualenv env
