@@ -5,14 +5,11 @@ import setuptools
 import re
 import string
 
-deps = map(string.strip, open('requirements.txt').readlines())
-version = '0.0.1'
-
 setuptools.setup(
     name='iris_admin',
-    version=version,
+    version='0.0.1',
     package_dir={'': 'src'},
     packages=setuptools.find_packages('src'),
     include_package_data=True,
-    install_requires=deps,
+    install_requires=open('requirements.txt').readlines(),
 )

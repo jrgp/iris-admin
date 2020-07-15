@@ -143,7 +143,7 @@ class User():
             WHERE `target_id` = (SELECT `id` FROM `target` WHERE `name` = %s)
             LIMIT 1
         ''', [info['admin'], username])
-        for mode, destination in contacts.iteritems():
+        for mode, destination in contacts.items():
 
             destination = destination.strip()
             if mode in ('call', 'sms'):
