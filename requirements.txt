@@ -3,7 +3,7 @@ configparser==3.5.0
 enum34==1.1.6
 falcon==1.1.0
 flake8==3.3.0
-gevent==1.1.2
+gevent==23.9.1
 greenlet==0.4.12
 gunicorn==19.7.1
 mccabe==0.6.1
